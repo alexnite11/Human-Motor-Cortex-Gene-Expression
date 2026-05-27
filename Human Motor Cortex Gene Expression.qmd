@@ -1,6 +1,6 @@
 ---
-title: "Final Project- PSY 473"
-author: "Alex Mushini"
+title: "Human Motor Cortex Gene Expression3"
+author: "Nite"
 format: html
 editor: visual
 ---
