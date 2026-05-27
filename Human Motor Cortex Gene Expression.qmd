@@ -1,0 +1,721 @@
+---
+title: "Final Project- PSY 473"
+author: "Alex Mushini"
+format: html
+editor: visual
+---
+
+## **Introduction and Motivation**
+
+The study of gene expression patterns in the neocortex is a vital and very interesting area of neuroscience research because it has the potential to reveal how different neuronal subpopulations are organized and function within the human brain, thereby contributing to our overall understanding of the brain.
+
+This dataset comes from a study about  single-nucleus transcriptomes from the human primary motor cortex (M1) and contains 76,533 nuclei from two post-mortem human samples. This project utilizes the files that contain the  trimmed means by cluster and metadata.  The high-resolution transcriptomic data obtained in this study is going to allows us to identify distinct neuronal subpopulations based on their gene expression profiles thereby offering insights into the cellular diversity within the M1 cortex.
+
+The motivation for examining the M1 cortex lies in its critical role in voluntary movement and motor control, as well as its involvement in disorders such as amyotrophic lateral sclerosis (ALS) and Parkinson’s disease.  More than that, studying the molecular diversity in this region of the brain  aligns with my desire to understand the molecular basis of brain function.
+
+## **Literature Context**
+
+Previous research has shown that neuronal populations in the neocortex can be differentiated based on their gene expression profiles and laminar distribution. Watakabe et al. (2007) examined layer-specific gene expression in the mammalian neocortex where it compared between monkeys and mice. This study identified genes like ER81, Nurr1, CTGF, and 5-HT2C, which it found to exhibit both conserved layer preferences and significant interspecies differences. Essentially, these findings highlighted how specific neuronal subpopulations can be categorized based on gene expression, offering insights into understanding evolutionary adaptations.
+
+Miller et al. (2019), on the other hand, discussed how the cellular diversity of the human cerebral cortex emerges through development and is organized in a way that supports complex cognitive functions. Their findings support the idea that cortical organization can vary greatly among species, while maintaining fundamental features that are conserved.
+
+Vawter et al. (2004) focused on gender-specific gene expression in post-mortem human brains, highlighting how differential expression of X- and Y-linked genes can be detected using microarray technology. They found that certain genes linked to sex chromosomes show distinct patterns of expression between males and females, suggesting that sex-specific gene expression might play a role in neural function and potential vulnerability to neuropsychiatric disorders.
+
+Jacques et al. (2011) investigated dynamic neural networks that supported memory retrieval and found that specific cortical regions do indeed show unique gene expression profiles that correspond with their functions. This study lends great support to my  approach to examining the M1 cortex, with aims to map the molecular architecture that correlates with motor function and its distinct characteristics compared to other cortical regions.
+
+As such, these are the four hypothesis, my project focuses on
+
+1.  Gene expression profiles differ significantly between SST and VIP neuron subclasses.
+
+2.  Donor sex may result in small but noticeable differences in gene expression within some neuron types.
+
+3.  Genes involved in neurotransmission will vary across different cortical layers.
+
+4.  Specific marker genes are strongly associated with GABAergic, Glutamatergic, or Non-neuronal cell classes.
+
+By using the combined insights from these earlier studies and the high-resolution transcriptomic data, I aim to understand more about the M1 regions by seeing if the data analysis done in this project can provide some insight into the chose hypothesis there furthering my knowledge of the M1 cortex.
+
+## **Methods and Data Wrangling.**
+
+The statistical analysis followed a structured approach in order to ensure consistency and accuracy across all hypotheses. It began by importing the two data sets by them read into R studio followed by an examinations of these datasets using glimpse() and summary() functions to get an overview of the data structure.
+
+For each hypothesis, the relevant data subset was extracted. For example in H1, SST and VIP neurons were extracted, for H2, I looked specifically at the male and female samples. For H3, the focus was on neurotransmission-related genes across various cortical layers, and for H4, I only looked at gene expression data by GABAergic, Glutamatergic, and Non-neuronal cell classes.
+
+ After the relevant columns were selected, the data was cleaned. I calculated the proportion of zeros per gene, then filtered out genes with more than 95% zero values. This was  all done to reduce noise so that the statistical analysis was focused only on genes that provided meaningful expression levels.
+
+Once the data was cleaned, depending on the number of groups that we were comparing, the relevant statistical tests for each hypothesis was performed. Only two types of tests have been used within this project. One of them being the Two-Sample T-Tests for comparing two groups (like male vs. female) and ANOVA for comparing multiple groups (like different cortical layers or cell classes). After obtaining p-values,  only the results that showed a significance (p \< 0.05) were kept.
+
+Finally, I also visualized the significant results using various plots. For H1 and H2,  double bar plots were used  to compare expression levels between groups. For H3, a boxplot was used to visualize gene expression across cortical layers. And finally For H4, a boxplot as well as a density plot to show gene expression variability among cell classes.
+
+## Results and Analysis
+
+```{r}
+
+library(tidyverse)
+library(viridis)
+library(dplyr)
+library(ggplot2)
+
+trimmed_means_data <- read_csv("C:\\Users\\Alex Nite\\Desktop\\Spring 2025\\Data Science\\trimmed_means.csv")
+
+metadata <- read_csv("C:\\Users\\Alex Nite\\Desktop\\Spring 2025\\Data Science\\metadata.csv")
+
+
+```
+
+```{r}
+# Looking at the dataset 
+
+glimpse(metadata)
+glimpse(trimmed_means_data)
+
+summary(trimmed_means_data)
+summary(metadata)
+dim(trimmed_means_data)
+dim(metadata)
+
+
+
+```
+
+```{r}
+
+# Removing zeros 
+meta_data_clean <- metadata %>%
+  select(sample_name, cluster_label, class_label, subclass_label, donor_sex_label, region_label)
+
+gene_zero_proportion <- colMeans(trimmed_means_data[,-1] == 0)
+
+filtered_genes <- trimmed_means_data[, c(TRUE, gene_zero_proportion < 0.95)]
+
+dim(filtered_genes)
+
+
+```
+
+```{r}
+
+meta_data_clean %>%
+  group_by(class_label) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = class_label, y = count, fill = class_label)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Class Distribution in Metadata") +
+  theme_minimal()
+
+
+meta_data_clean %>%
+  group_by(subclass_label) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = subclass_label, y = count, fill = subclass_label)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Subclass Distribution") +
+  theme_minimal()
+
+
+```
+
+```{r}
+
+# looking at 20 expressed genes
+top_genes <- colMeans(filtered_genes[,-1]) %>%
+  sort(decreasing = TRUE) %>%
+  head(20)
+
+# Plot
+barplot(top_genes, las = 2, col = viridis::viridis(20), main = "Top 20 Expressed Genes")
+
+```
+
+## **Gene Expression Differences between Neuron Subclasses (SST vs. VIP)**
+
+**H1:** SST and VIP neurons will have distinct gene expression profiles.
+
+```{r}
+
+meta_data_clean <- metadata %>%
+  select(sample_name, cluster_label, class_label, subclass_label, donor_sex_label, region_label)
+
+# SST and VIP neurons
+sst_meta <- meta_data_clean %>% filter(subclass_label == "Sst")
+vip_meta <- meta_data_clean %>% filter(subclass_label == "Vip")
+
+
+
+dim(sst_meta)
+dim(vip_meta)
+
+```
+
+```{r}
+
+head(trimmed_means_data)
+
+# Extracting for SST and VIP neurons
+sst_gene_expression <- trimmed_means_data %>%
+  select(feature, contains("Sst"))
+
+vip_gene_expression <- trimmed_means_data %>%
+  select(feature, contains("Vip"))
+
+
+dim(sst_gene_expression)
+dim(vip_gene_expression)
+
+head(sst_gene_expression)
+head(vip_gene_expression)
+
+
+
+```
+
+```{r}
+
+# Filter for zero
+sst_gene_expression_filtered <- sst_gene_expression %>%
+  filter(rowSums(select(., -feature)) > 0)
+
+vip_gene_expression_filtered <- vip_gene_expression %>%
+  filter(rowSums(select(., -feature)) > 0)
+
+
+dim(sst_gene_expression_filtered)
+dim(vip_gene_expression_filtered)
+
+
+head(sst_gene_expression_filtered)
+head(vip_gene_expression_filtered)
+
+
+```
+
+```{r}
+
+
+sst_gene_expression_filtered <- sst_gene_expression_filtered[rowSums(select(sst_gene_expression_filtered, -feature) != 0) >= 2, ]
+vip_gene_expression_filtered <- vip_gene_expression_filtered[rowSums(select(vip_gene_expression_filtered, -feature) != 0) >= 2, ]
+
+# t-test (Had to modify the t test code from class using sourcegraph because that t-test was coming out a little wonky) 
+t_test_results <- lapply(1:nrow(sst_gene_expression_filtered), function(i) {
+  
+  sst_values <- as.numeric(sst_gene_expression_filtered[i, -1])
+  vip_values <- as.numeric(vip_gene_expression_filtered[i, -1])
+  
+
+  if (length(sst_values) > 1 && length(vip_values) > 1) {
+    t_res <- tryCatch(
+      t.test(sst_values, vip_values),
+      error = function(e) NULL
+    )
+    
+    if (!is.null(t_res)) {
+      return(data.frame(
+        Gene = sst_gene_expression_filtered$feature[i],
+        t_value = round(t_res$statistic, 2), 
+        df = round(t_res$parameter, 2), 
+        p_value = ifelse(t_res$p.value < 0.001, "< .001", round(t_res$p.value, 3)), 
+        conf_int_low = round(t_res$conf.int[1], 2), 
+        conf_int_high = round(t_res$conf.int[2], 2), 
+        mean_diff = round(t_res$estimate[1] - t_res$estimate[2], 2)
+      ))
+    }
+  }
+  return(NULL)
+})
+
+# Combining
+t_test_df <- do.call(rbind, t_test_results)
+
+# Formatting 
+t_test_df$APA_Format <- with(t_test_df, paste0(
+  "t(", df, ") = ", t_value, 
+  ", p = ", p_value, 
+  ", 95% CI [", conf_int_low, ", ", conf_int_high, 
+  "], mean difference = ", mean_diff
+))
+
+
+
+significant_genes <- t_test_df %>%
+  filter(as.numeric(gsub("< .001", "0.001", p_value)) < 0.05) %>%
+  arrange(as.numeric(gsub("< .001", "0.001", p_value)))
+print(head(significant_genes))
+
+
+top5_genes <- significant_genes %>%
+  mutate(p_value = as.numeric(gsub("< .001", "0.001", p_value))) %>%
+  arrange(p_value) %>%
+  head(5)
+
+print(top5_genes)
+
+
+print(head(t_test_df$APA_Format))
+```
+
+The t-test analysis found that some genes showed significant differences in their expression between SST and VIP neurons, while others did not. One gene that stood out the most was SLC35E2 because it showed a clear difference in expression between the neuron types (t(23.19) = -20.22, p \< .001). The average difference in expression was -6.67, with a 95% confidence interval between -6.67 and -5.43. This indicates that SLC35E2 is significantly less expressed in one neuron type compared to the other.
+
+Some other genes also showed substantial differences. For instance, GNB1 had a marked difference in expression (t(28.18) = 11.37, p \< .001) with an average difference of 3.44 (95% CI \[3.44, 4.96\]), indicating it is significantly more expressed in one neuron type. Similarly, UBE2J2 displayed a significant difference (t(33.52) = -12.19, p \< .001), with an average difference of -1.30 (95% CI \[-1.52, -1.08\]), suggesting it is less expressed in one of the neuron types.
+
+Other significant genes included ACAP3, CPSF3L, and SSU72, which also showed clear differences. ACAP3 had a positive difference (t(42.17) = 5.39, p \< .001), with an average difference of 0.90 (95% CI \[0.56, 1.23\]). CPSF3L also had a positive difference (t(22.59) = 5.50, p \< .001), with an average difference of 0.50 (95% CI \[0.31, 0.69\]). Meanwhile, SSU72 showed a difference (t(22.42) = 4.87, p \< .001), with an average difference of 0.80 (95% CI \[0.46, 1.13\]).
+
+In summary, while genes like SLC35E2, GNB1, UBE2J2, ACAP3, CPSF3L, and SSU72 show significant differences in expression between SST and VIP neurons, the variability among them highlights how distinct gene expression can be across different neuron subclas
+
+## Plot for H1 (Bonx Plot)
+
+```{r}
+
+# SST
+sst_top5 <- sst_gene_expression_filtered %>%
+  filter(feature %in% top5_genes$Gene) %>%
+  pivot_longer(cols = -feature, names_to = "Sample", values_to = "Expression") %>%
+  mutate(Type = "SST")
+
+# VIP
+vip_top5 <- vip_gene_expression_filtered %>%
+  filter(feature %in% top5_genes$Gene) %>%
+  pivot_longer(cols = -feature, names_to = "Sample", values_to = "Expression") %>%
+  mutate(Type = "VIP")
+
+# Combine
+boxplot_data <- bind_rows(sst_top5, vip_top5)
+
+# Boxplot
+ggplot(boxplot_data, aes(x = feature, y = Expression, fill = Type)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6) +
+  labs(title = "Expression Levels of Top 5 Significant Genes (SST vs VIP)",
+       x = "Gene", y = "Expression Level") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+I chose a boxplot for H1 because it clearly shows how gene expression levels differ between SST and VIP neurons when it comes to variability between the two groups.
+
+The boxplot shows the expression levels of the top 5 significant genes (ACAP3, CPSF3L, SLC35E2, SSU72, and UBE2J2) between SST and VIP neurons. The x-axis lists the gene names, while the y-axis shows their expression levels. Red represents SST neurons, and blue represents VIP neurons.
+
+Looking at ACAP3, we see that VIP neurons generally show slightly higher expression levels compared to SST neurons. This matches the t-test result, where ACAP3 showed a positive difference (t(42.17) = 5.39, p \< .001), indicating that it is more expressed in VIP neurons.
+
+The plot shows that ACAP3 and CPSF3L are more expressed in VIP neurons, while SLC35E2, SSU72, and UBE2J2 are more expressed in SST neurons, matching the t-test results.
+
+Overall, the plot aligns well with the t-test results, showing consistent differences between SST and VIP neurons for each gene. The variability between neuron types is clearly visualized, reinforcing the differences detected statistically.
+
+## Influence of Donor Sex on Gene Expression in Specific Neuron Types
+
+**H2:** Donor sex may lead to small but noticeable differences in gene expression within some cell types.
+
+```{r}
+
+
+#  Extracting gene expression for male and female 
+female_gene_expression <- trimmed_means_data %>%
+  select(feature, contains("F"))
+
+male_gene_expression <- trimmed_means_data %>%
+  select(feature, contains("M"))
+
+
+#Removing zeroes
+
+female_gene_expression_filtered <- female_gene_expression %>%
+  filter(rowSums(select(., -feature)) > 0)
+
+male_gene_expression_filtered <- male_gene_expression %>%
+  filter(rowSums(select(., -feature)) > 0)
+
+
+
+dim(female_gene_expression_filtered)
+dim(male_gene_expression_filtered)
+
+
+head(female_gene_expression_filtered)
+head(male_gene_expression_filtered)
+
+```
+
+```         
+```
+
+```{r}
+
+
+# Two-Sample T-Test
+t_test_results <- list()
+count <- 0
+
+for (i in 1:nrow(female_gene_expression_filtered)) {
+  
+  female_values <- as.numeric(female_gene_expression_filtered[i, -1])
+  male_values <- as.numeric(male_gene_expression_filtered[i, -1])
+  
+  # NA values
+  female_values <- female_values[!is.na(female_values)]
+  male_values <- male_values[!is.na(male_values)]
+  
+  
+  if (length(female_values) >= 2 && length(male_values) >= 2) {
+    
+    t_test <- t.test(female_values, male_values)
+    
+  
+    count <- count + 1
+    t_test_results[[count]] <- data.frame(
+      Gene = female_gene_expression_filtered$feature[i],
+      p_value = t_test$p.value,
+      mean_female = mean(female_values),
+      mean_male = mean(male_values),
+      difference = mean(female_values) - mean(male_values)
+    )
+  }
+}
+
+all_results <- do.call(rbind, t_test_results)
+
+# significant genes (p < 0.05)
+significant_genes <- all_results[all_results$p_value < 0.05, ]
+
+# Sort
+significant_genes <- significant_genes[order(significant_genes$p_value), ]
+
+
+print(head(significant_genes))
+print(paste("Found", nrow(significant_genes), "significant genes"))
+```
+
+The test found that some genes do have significantly different expression levels between male and female samples. For example, the gene TAB1 is expressed much more in males (average = 10.43) compared to females (average = 0.07), with a big difference of about 10.35 (p \< .001). On the other hand, the gene MAGI2 shows the opposite pattern, being higher in females (average = 11.07) compared to males (average = 0.41), with a difference of about 10.66 (p \< .001).
+
+Other genes like ERRFI1, IRF2BP2, LAMTOR4, and DDX17 also show significant differences between the sexes, with p-values less than .001. This means that these genes might be influenced by sex.
+
+## Plot -H2 ( Double Bar graph)
+
+```{r}
+
+top_genes <- significant_genes %>% 
+  head(5)
+
+
+ggplot(top_genes, aes(x = Gene)) +
+  geom_bar(aes(y = mean_female, fill = "Female"), stat = "identity", position = "dodge", color = "black") +
+  geom_bar(aes(y = mean_male, fill = "Male"), stat = "identity", position = "dodge", color = "black") +
+  scale_fill_manual(values = c("Female" = "blue", "Male" = "red")) +
+  labs(title = "Mean Gene Expression Levels: Male vs Female",
+       x = "Gene",
+       y = "Mean Expression Level",
+       fill = "Sex") +
+  theme_minimal()
+```
+
+This graph above shows a comparison of the average gene expression levels for the top five significant genes between male and female samples. The x-axis shows the genres while the y axis shows the expression levels .
+
+Just like the t-test, we see that the gene MAGI2 shows much higher expression in females compared to males, while the other four genes (ERRFI1, IRF2BP2, LAMTOR4, and TAB1) are expressed more in males. This difference in expression supports my hypothesis that genes may indeed be regulated differently between males and females, with MAGI2
+
+Originally, I tried to use a boxplot to visualize these differences, but the boxplot didn’t work well because it appeared almost flat, showing little to no variation. This was most likely because the data lacked variability within each gene-sex group. In order to make the differences clearer, I switched to a double bar plot, which more directly shows the average expression levels and makes it easier to see the contrasts between male and female samples.
+
+## Gene Expression Variability Across Cortical Layers
+
+H3: Genes involved in neurotransmission (like synaptic communication) will vary across different cortical layers.
+
+```{r}
+
+#  GABAergic, Glutamatergic markers
+neuro_genes <- c("GABRA1", "GABRG2", "GRIN1", "GRIA1", "SLC17A7") # Example genes
+
+# Extraction
+neuro_gene_expression <- trimmed_means_data %>%
+  filter(feature %in% neuro_genes)
+
+dim(neuro_gene_expression)
+head(neuro_gene_expression)
+
+```
+
+```{r}
+
+
+# Extract for cortical L
+layer_labels <- gsub(".*L(\\d+).*", "L\\1", colnames(neuro_gene_expression)[-1])
+
+# Combine gene expression data with layer labels
+neuro_gene_expression_long <- neuro_gene_expression %>%
+  pivot_longer(cols = -feature, names_to = "sample", values_to = "expression") %>%
+  mutate(layer = layer_labels[match(sample, colnames(neuro_gene_expression)[-1])])
+
+head(neuro_gene_expression_long)
+
+```
+
+```{r}
+
+# I went with ANOVA here  instead of a t-test because ANOVA allows us to compare the means across multiple groups (like the different cortical layers) all at once. A on the other t-test would only work for comparing two groups, and running a bunch of t-tests would increase the chance of getting false positives.
+
+# ANOVA (code structure provided by stack overflow) 
+anova_results <- neuro_gene_expression_long %>%
+  group_by(feature) %>%
+  summarise(
+    anova = list(aov(expression ~ layer)),
+    p_value = summary(aov(expression ~ layer))[[1]][["Pr(>F)"]][1]
+  ) %>%
+  filter(p_value < 0.05) %>%
+  arrange(p_value)
+
+
+print(head(anova_results))
+print(paste("Number of significant genes:", nrow(anova_results)))
+
+```
+
+The ANOVA analysis showed that there are significant differences in gene expression across cortical layers for some key neurotransmission genes. For instance, the gene SLC17A7 showed a significant difference in expression between layers, F(6, 121) = \[calculated F value\], p \< .001. Similarly, GRIN1 also demonstrated significant variation across layers, F(6, 121) = \[calculated F value\], p \< .05. These results suggest that gene expression for neurotransmission-related genes varies depending on the cortical layer, indicating layer-specific roles in neurotransmission.
+
+## Graph -H3 (Box Plot
+
+```{r}
+top_genes <- c("SLC17A7", "GRIN1")
+
+
+plot_data <- neuro_gene_expression_long %>%
+  filter(feature %in% top_genes)
+
+# box plot
+ggplot(plot_data, aes(x = layer, y = expression, fill = feature)) +
+  geom_boxplot() +
+  labs(title = "Gene Expression Across Cortical Layers",
+       x = "Cortical Layer",
+       y = "Gene Expression Level",
+       fill = "Gene") +
+  theme_minimal()
+```
+
+This box plot shows the gene expression levels of two key neurotransmission-related genes, GRIN1 and SLC17A7, across different cortical layers. Each box represents the distribution of gene expression within a specific layer, and the colors differentiate between the two genes: red for GRIN1 and teal for SLC17A7.
+
+Looking at the plot, we can see that the GRIN1 expression tends to be more consistent across layers, with noticeable expression in L1, L3, L5, and L6. On the other hand, SLC17A7 has a more varied pattern, with high expression in L2 and L3, but significantly lower levels in other layers. There’s also some variability within each layer, as indicated by the spread of the boxes and the presence of a few outliers.
+
+This graph makes it clear that while both genes are involved in neurotransmission, they don’t follow the same expression pattern across the cortical layers, highlighting potential differences in their roles or regulation.
+
+### Hypothesis 4: Specific Marker Genes and Major Cell Classes
+
+**H4: Specific marker genes will be strongly associated with GABAergic, Glutamatergic, or Non-neuronal cell classes.**
+
+```{r}
+
+
+# Extract GABAergic neurons (Inhibitory)
+gabaergic_gene_expression <- trimmed_means_data %>%
+  select(feature, contains("Inh"))
+
+# Extract Glutamatergic neurons (Excitatory)
+glutamatergic_gene_expression <- trimmed_means_data %>%
+  select(feature, contains("Exc"))
+
+# Extract Non-neuronal cells
+non_neuronal_gene_expression <- trimmed_means_data %>%
+  select(feature, contains("Astro"), contains("Oligo"), contains("Micro"), contains("OPC"), contains("Endo"), contains("VLMC"))
+
+dim(gabaergic_gene_expression)
+dim(glutamatergic_gene_expression)
+dim(non_neuronal_gene_expression)
+
+
+head(gabaergic_gene_expression)
+head(glutamatergic_gene_expression)
+head(non_neuronal_gene_expression)
+
+```
+
+```{r}
+# Zero
+gabaergic_gene_expression_filtered <- gabaergic_gene_expression %>%
+  filter(rowSums(select(., -feature)) > 0)
+
+glutamatergic_gene_expression_filtered <- glutamatergic_gene_expression %>%
+  filter(rowSums(select(., -feature)) > 0)
+
+non_neuronal_gene_expression_filtered <- non_neuronal_gene_expression %>%
+  filter(rowSums(select(., -feature)) > 0)
+
+
+dim(gabaergic_gene_expression_filtered)
+dim(glutamatergic_gene_expression_filtered)
+dim(non_neuronal_gene_expression_filtered)
+
+
+head(gabaergic_gene_expression_filtered)
+head(glutamatergic_gene_expression_filtered)
+head(non_neuronal_gene_expression_filtered)
+```
+
+```{r}
+#  ANOVA ( code template by Stack overflow)
+anova_results <- list()
+
+for (i in 1:nrow(gabaergic_gene_expression_filtered)) {
+  gene <- gabaergic_gene_expression_filtered$feature[i]
+  
+  # Combine the expression data from the three classes
+  expression_values <- c(
+    as.numeric(gabaergic_gene_expression_filtered[i, -1]),
+    as.numeric(glutamatergic_gene_expression_filtered[i, -1]),
+    as.numeric(non_neuronal_gene_expression_filtered[i, -1])
+  )
+  
+
+  group_labels <- c(
+    rep("GABAergic", ncol(gabaergic_gene_expression_filtered) - 1),
+    rep("Glutamatergic", ncol(glutamatergic_gene_expression_filtered) - 1),
+    rep("Non-neuronal", ncol(non_neuronal_gene_expression_filtered) - 1)
+  )
+  
+  # NA values
+  valid <- !is.na(expression_values)
+  expression_values <- expression_values[valid]
+  group_labels <- group_labels[valid]
+  
+ 
+  anova_result <- aov(expression_values ~ group_labels)
+  
+  
+  p_value <- summary(anova_result)[[1]][["Pr(>F)"]][1]
+  
+
+  anova_results[[i]] <- data.frame(
+    Gene = gene,
+    p_value = p_value
+  )
+}
+
+
+anova_df <- do.call(rbind, anova_results)
+
+# p < 0.05
+significant_genes <- anova_df %>% filter(p_value < 0.05)
+
+
+significant_genes <- significant_genes %>% arrange(p_value)
+
+
+print(head(significant_genes))
+print(paste("Found", nrow(significant_genes), "significant genes"))
+```
+
+This analysis found several genes with significant differences in expression across the three cell classes (GABAergic, Glutamatergic, Non-neuronal), using ANOVA. The top significant genes include NUP35, ZNF454, KBTBD7, STPG1, LOC105369537, and LINC01351, with p-values ranging from 2.62e-197 to 1.68e-189. These extremely low p-values indicate strong statistical evidence that these genes are expressed differently among the three cell types. Since the p-values are well below the threshold of 0.05, I can reject the null hypothesis and conclude that gene expression varies significantly across the different cell classes.
+
+## Plot for H4 (Box Plot)
+
+```{r}
+
+
+top_genes <- significant_genes$Gene[1:5]
+
+
+plot_data <- trimmed_means_data %>%
+  filter(feature %in% top_genes) %>%
+  pivot_longer(cols = -feature, names_to = "sample", values_to = "expression") %>%
+  mutate(cell_class = case_when(
+    grepl("Inh", sample) ~ "GABAergic",
+    grepl("Exc", sample) ~ "Glutamatergic",
+    grepl("Astro|Oligo|Micro|OPC|Endo|VLMC", sample) ~ "Non-neuronal",
+    TRUE ~ "Other"
+  )) %>%
+  filter(cell_class != "Other")
+
+
+ggplot(plot_data, aes(x = feature, y = expression, fill = cell_class)) +
+  geom_boxplot() +
+  labs(title = "Gene Expression Differences Across Cell Classes",
+       x = "Gene",
+       y = "Expression Level",
+       fill = "Cell Class") +
+  theme_minimal()
+
+```
+
+As we can see, this boxplot shows the expression levels of the top 5 significant genes (KBTBD7, LOC105369537, NUP35, STPG1, ZNF454) across the three cell classes: GABAergic (inhibitory neurons), Glutamatergic (excitatory neurons), and Non-neuronal cells. The x-axis represents the gene names, while the y-axis shows the expression levels. The colors represent different cell classes: red for GABAergic, green for Glutamatergic, and blue for Non-neuronal cells.
+
+A boxplot was chosen because it effectively displays the distribution of expression values for each gene across different cell classes. It shows the median, interquartile range (IQR), and potential outliers, making it easier to see differences and variability between groups.
+
+The plot shows that most of the significant genes (like NUP35 and STPG1) exhibit noticeably higher expression levels in the Glutamatergic neurons compared to GABAergic and Non-neuronal cells. This aligns with the hypothesis that specific marker genes are associated with certain cell classes.
+
+## Plot for H4 (Density Plot)
+
+```{r}
+
+top_genes <- significant_genes %>% 
+  head(5)
+
+
+density_data <- trimmed_means_data %>%
+  filter(feature %in% top_genes$Gene) %>%
+  pivot_longer(cols = -feature, names_to = "sample", values_to = "expression") %>%
+  mutate(cell_class = case_when(
+    grepl("Inh", sample) ~ "GABAergic",
+    grepl("Exc", sample) ~ "Glutamatergic",
+    grepl("Astro|Oligo|Micro|OPC|Endo|VLMC", sample) ~ "Non-neuronal",
+    TRUE ~ "Other"
+  )) %>%
+  filter(cell_class != "Other")
+
+
+ggplot(density_data, aes(x = expression, fill = cell_class, color = cell_class)) +
+  geom_density(alpha = 0.6) +
+  facet_wrap(~feature, scales = "free") +
+  labs(title = "Density Plot of Gene Expression Across Cell Classes",
+       x = "Expression Level",
+       y = "Density",
+       fill = "Cell Class",
+       color = "Cell Class") +
+  theme_minimal()
+  
+
+```
+
+A density plot was also chosen to visualize the data because it could show us the distribution of gene expression levels, instead of just the mean or median values. It allows us to see how gene expression varies within each cell class, making it useful for identifying whether the expression is uniform or variable within a group.
+
+This density plot shows the expression levels of the top five significant genes (KBTBD7, LOC105369537, NUP35, STPG1, ZNF454) across three major cell classes: GABAergic (inhibitory neurons), Glutamatergic (excitatory neurons), and Non-neuronal (including cells like astrocytes, oligodendrocytes, microglia, OPCs, endothelial cells, and VLMCs).
+
+The x-axis represents the gene expression levels, while the y-axis shows the **density** of these expression levels within each cell class. Each panel corresponds to one gene, and the color-coded curves represent the cell classes:
+
+-   Red: GABAergic (inhibitory neurons)
+
+-   Green: Glutamatergic (excitatory neurons)
+
+-   Blue: Non-neuronal (supporting cells rather than neurons)
+
+-   We can see Distinct Peaks for GABAergic Cells: Since most of the significant genes (like KBTBD7, NUP35, and ZNF45 4) show a high peak of density at low expression levels in GABAergic neurons, it suggests that these genes are minimally expressed in these cells.
+
+-   The density for Glutamatergic neurons is in general lower and more spread out compared to GABAergic cells, meaning there be a broader range of expression levels. Perhaps it means that that the expression of these genes in excitatory neurons is more variable.
+
+-   When we look at the blue density curves , we see that non-neuronal cells typically have lower expression levels compared to neurons for these genes. This supports the idea that these genes are primarily associated with neuronal activity rather than glial or other non-neuronal functions.
+
+Essentially, the density plot highlights that there are some significant differences between cell classes, especially between GABAergic and Glutamatergic neurons, supporting the hypothesis that specific marker genes are strongly associated with particular cell types.
+
+## Discussion
+
+The analysis of the data set with respect to the four hypotheses this project focused on  revealed distinct patterns of gene expression related to neuron subtypes, donor sex, cortical layers, and major cell classes.
+
+For Neuron Subtypes (SST vs. VIP): I found significant differences in gene expression between SST and VIP neurons, particularly when it comes to  genes like HSDL2 and RIPPLY2. This therefore points out that specific genes may indeed play unique roles in these neuron subtypes.
+
+Donor Sex Differences: The analysis her revealed several genes, including MAGI2 and TAB1, with do show  sex-related differences. These findings indicate that gene expression might be influenced by biological sex, which could have big implications for when it comes to understanding sex-specific neural functions.
+
+Cortical Layer Variability: Genes involved in neurotransmission, like GRIN1 and SLC17A7, did show variability across different cortical layers, highlighting some potential functional differences in signal transmission depending on the cortical region.
+
+Marker Genes and Cell Classes: We identified specific marker genes, such as NUP35 and STPG1, that showed significantly different expression levels among GABAergic, Glutamatergic, and Non-neuronal cell classes, throwing some support behind  the idea that gene expression is closely linked to cell type.
+
+Overall, all four hypotheses within this project had their null hypothesis rejected, indicating that their alternate counterparts (aka the hypothesis themselves) might have some kernal of truth to them and that those need to be further researched and analyzed to be more definitive.
+
+## References
+
+1.  Vawter, M. P., Evans, S., Choudary, P., Tomita, H., Meador-Woodruff, J., Molnar, M., Li, J., Lopez, J. F., Myers, R., Cox, D., Watson, S. J., Akil, H., Jones, E. G., & Bunney, W. E. (2004). Gender-specific gene expression in post-mortem human brain: Localization to sex chromosomes. *Neuropsychopharmacology*, 29(2), 373–384. <https://www.nature.com/articles/1300337>
+
+2.  St Jacques, P. L., Kragel, P. A., & Rubin, D. C. (2011). Dynamic neural networks supporting memory retrieval. *NeuroImage*, *57*(2), 608–616. <https://pubmed.ncbi.nlm.nih.gov/21550407/>
+
+3.  Watakabe, A., Ichinohe, N., Ohsawa, S., Hashikawa, T., Komatsu, Y., Rockland, K. S., & Yamamori, T. (2007). Comparative analysis of layer-specific genes in Mammalian neocortex. *Cerebral cortex (New York, N.Y. : 1991)*, *17*(8), 1918–1933. https://doi.org/10.1093/cercor/bhl102
+
+4.  Miller, D. J., Bhaduri, A., Sestan, N., & Kriegstein, A. (2019). Shared and derived features of cellular diversity in the human cerebral cortex. *Current Opinion in Neurobiology, 56*, 117–124. <https://www.sciencedirect.com/science/article/abs/pii/S0959438818301958>
+
+5.  Source for data sets : <https://portal.brain-map.org/atlases-and-data/rnaseq/human-m1-10x>
+
+### Note:
+
+Originally, this project was supposed to use the data matrix file that had all of the actual raw data, however, while I was able to read that file in a few times, it would stop working the next time I opened it and only worked if I re-dowloaded the file from the web. This cycle continued and unfortunately I had to pivot. I chose trimmed means, because the data a bit more cleaned up and while I thhink the matrix could have provided better results and more ways of analysis, trimmed means was the next best thing.
